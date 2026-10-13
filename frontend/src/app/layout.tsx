@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Sidebar from '@/components/Sidebar';
-import Header from '@/components/Header';
+import AppShell from '@/components/AppShell';
 
 export const metadata: Metadata = {
   title: 'VoiceBroadcastPro | Next-Gen Enterprise Voice & Reseller PBX',
@@ -16,11 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="bg-surface-dark min-h-screen antialiased text-gray-100 flex">
-        <Sidebar />
-        <div className="flex-1 ml-64 flex flex-col min-h-screen">
-          <Header />
-          <main className="p-8 flex-1">{children}</main>
-        </div>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

@@ -1,45 +1,54 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Bell, CreditCard, ShieldCheck, LogOut, AlertTriangle, UserCheck } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Bell,
+  CreditCard,
+  ShieldCheck,
+  LogOut,
+  AlertTriangle,
+  RotateCcw,
+  User,
+  ChevronDown,
+} from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Header() {
-  const [impersonatedUser, setImpersonatedUser] = useState<any>(null);
+  const { activeUser, isImpersonating, exitImpersonation, logout } = useAuth();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('impersonated_user');
-      if (stored) {
-        setImpersonatedUser(JSON.parse(stored));
-      }
-    } catch (e) {
-      // ignore
-    }
-  }, []);
-
-  const handleExitImpersonation = () => {
-    localStorage.removeItem('impersonated_token');
-    localStorage.removeItem('impersonated_user');
-    window.location.reload();
-  };
+  const initials = activeUser?.name
+    ? activeUser.name
+        .split(' ')
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    : 'VP';
 
   return (
     <header className="border-b border-gray-800 glass-panel sticky top-0 z-40 flex flex-col">
       {/* Impersonation Banner */}
-      {impersonatedUser && (
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-8 py-2 flex items-center justify-between text-xs text-white font-bold shadow-md">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-white animate-bounce" />
+      {isImpersonating && (
+        <div className="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 px-8 py-2.5 flex items-center justify-between text-xs text-white font-bold shadow-lg animate-in slide-in-from-top">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-white animate-bounce flex-shrink-0" />
             <span>
-              IMPERSONATION ACTIVE: You are viewing the system as Customer{' '}
-              <span className="underline decoration-white underline-offset-2">{impersonatedUser.name}</span> ({impersonatedUser.email})
+              IMPERSONATION ACTIVE: Currently logged in as Customer{' '}
+              <span className="underline decoration-white underline-offset-2 font-black">
+                {activeUser?.name}
+              </span>{' '}
+              ({activeUser?.email}) — Wallet:{' '}
+              <span className="bg-black/30 px-2 py-0.5 rounded text-amber-200">
+                ৳{Number(activeUser?.wallet?.balance || 0).toFixed(2)} BDT
+              </span>
             </span>
           </div>
           <button
-            onClick={handleExitImpersonation}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-black/40 hover:bg-black/60 text-white text-[11px] font-black border border-white/20 transition"
+            onClick={exitImpersonation}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-black/50 hover:bg-black/75 text-white text-[11px] font-black border border-white/20 transition shadow-sm"
           >
-            <LogOut className="w-3.5 h-3.5" /> Return to Super Admin
+            <RotateCcw className="w-3.5 h-3.5" /> Return to Super Admin
           </button>
         </div>
       )}
@@ -65,9 +74,7 @@ export default function Header() {
             <CreditCard className="w-3.5 h-3.5 text-brand-400" />
             <span>Wallet:</span>
             <span className="text-white font-bold tracking-wide">
-              {impersonatedUser
-                ? `${Number(impersonatedUser.wallet?.balance || 0).toFixed(2)} BDT`
-                : '500,000.00 BDT'}
+              ৳{Number(activeUser?.wallet?.balance || 0).toFixed(2)} BDT
             </span>
           </div>
 
@@ -76,20 +83,70 @@ export default function Header() {
             <Bell className="w-4 h-4" />
           </button>
 
-          {/* Profile Avatar */}
-          <div className="flex items-center gap-3 pl-2 border-l border-gray-800">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-brand-500/30">
-              {impersonatedUser ? impersonatedUser.name.slice(0, 2).toUpperCase() : 'SA'}
-            </div>
-            <div className="hidden md:block">
-              <div className="text-xs font-medium text-white flex items-center gap-1">
-                {impersonatedUser ? impersonatedUser.name : 'Super Admin'}{' '}
-                <ShieldCheck className="w-3.5 h-3.5 text-brand-400" />
+          {/* Profile Avatar & Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex items-center gap-3 pl-2 border-l border-gray-800 hover:opacity-90 transition focus:outline-none"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-brand-500/30">
+                {initials}
               </div>
-              <div className="text-[10px] text-gray-400">
-                {impersonatedUser ? impersonatedUser.email : 'admin@voicepro.com'}
+              <div className="hidden md:block text-left">
+                <div className="text-xs font-medium text-white flex items-center gap-1">
+                  <span>{activeUser?.name || 'Super Admin'}</span>
+                  {activeUser?.role === 'SUPER_ADMIN' ? (
+                    <ShieldCheck className="w-3.5 h-3.5 text-brand-400" />
+                  ) : (
+                    <User className="w-3.5 h-3.5 text-emerald-400" />
+                  )}
+                  <ChevronDown className="w-3 h-3 text-gray-400 ml-0.5" />
+                </div>
+                <div className="text-[10px] text-gray-400 truncate max-w-[140px]">
+                  {activeUser?.email || 'admin@voicepro.com'}
+                </div>
               </div>
-            </div>
+            </button>
+
+            {/* Dropdown Menu */}
+            {showProfileMenu && (
+              <div
+                className="absolute right-0 mt-2 w-56 rounded-2xl bg-gray-900/95 border border-gray-800 shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 space-y-1"
+                onMouseLeave={() => setShowProfileMenu(false)}
+              >
+                <div className="p-2 border-b border-gray-800 text-xs">
+                  <div className="font-bold text-white">{activeUser?.name}</div>
+                  <div className="text-[11px] text-gray-400 truncate">{activeUser?.email}</div>
+                  <div className="mt-1">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                      {activeUser?.role || 'SUPER_ADMIN'}
+                    </span>
+                  </div>
+                </div>
+
+                {isImpersonating && (
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      exitImpersonation();
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-amber-300 hover:bg-amber-500/10 flex items-center gap-2 transition"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Exit Impersonation
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    logout();
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition"
+                >
+                  <LogOut className="w-3.5 h-3.5" /> Sign Out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

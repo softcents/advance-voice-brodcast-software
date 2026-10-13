@@ -29,9 +29,20 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import { useAuth } from '@/context/AuthContext';
 
 export default function DashboardPage() {
+  const { activeUser, isImpersonating } = useAuth();
   const [roleView, setRoleView] = useState<'ADMIN' | 'CUSTOMER'>('ADMIN');
+
+  useEffect(() => {
+    if (activeUser?.role === 'CUSTOMER' || isImpersonating) {
+      setRoleView('CUSTOMER');
+    } else {
+      setRoleView('ADMIN');
+    }
+  }, [activeUser?.role, isImpersonating]);
+
   const [selectedLog, setSelectedLog] = useState<'full' | 'messages'>('full');
   const [callsFilter, setCallsFilter] = useState<'today' | 'week' | 'month' | 'year'>('week');
   const [revenueFilter, setRevenueFilter] = useState<'today' | 'week' | 'month' | 'year'>('week');
@@ -599,8 +610,12 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <div className="p-5 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
               <span className="text-xs font-semibold text-gray-400">Available Balance</span>
-              <div className="mt-2 text-2xl font-black text-emerald-400">BDT 2,450.00</div>
-              <div className="mt-1 text-xs text-gray-500">~4,900 calls remaining</div>
+              <div className="mt-2 text-2xl font-black text-emerald-400">
+                BDT {Number(activeUser?.wallet?.balance ?? 2450).toFixed(2)}
+              </div>
+              <div className="mt-1 text-xs text-gray-500">
+                ~{Math.floor(Number(activeUser?.wallet?.balance ?? 2450) / 0.5).toLocaleString()} calls remaining
+              </div>
             </div>
 
             <div className="p-5 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
