@@ -1,0 +1,40 @@
+module.exports = {
+  apps: [
+    {
+      name: 'voice-pro-backend',
+      cwd: './backend',
+      script: 'dist/src/main.js',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 4000,
+        DATABASE_URL: 'postgresql://postgres:postgres@127.0.0.1:5432/voice_pro?schema=public',
+        REDIS_HOST: '127.0.0.1',
+        REDIS_PORT: 6379,
+        RABBITMQ_URL: 'amqp://guest:guest@127.0.0.1:5672',
+        ASTERISK_ARI_URL: 'http://127.0.0.1:8088',
+        ASTERISK_ARI_USER: 'asterisk',
+        ASTERISK_ARI_PASS: 'StrongPass123',
+        JWT_SECRET: 'voice-broadcast-pro-super-secret-key-2026',
+      },
+    },
+    {
+      name: 'voice-pro-frontend',
+      cwd: './frontend',
+      script: 'node_modules/next/dist/bin/next',
+      args: 'start -p 3000',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 3000,
+        NEXT_PUBLIC_API_URL: 'http://127.0.0.1:4000/api',
+      },
+    },
+  ],
+};

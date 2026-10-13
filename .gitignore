@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Production build outputs
+.next/
+**/.next/
+dist/
+**/dist/
+
+# Environment variables
+.env
+**/.env
+.env.*
+!.env.example
+
+# Logs & temp
+*.log
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

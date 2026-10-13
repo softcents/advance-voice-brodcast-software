@@ -1,0 +1,24 @@
+services:
+  asterisk:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: voice-pro-asterisk
+    restart: always
+    network_mode: host # Uses host networking for optimal VoIP RTP latency & zero NAT traversal issues
+    volumes:
+      - ./conf/ari.conf:/etc/asterisk/ari.conf:ro
+      - ./conf/http.conf:/etc/asterisk/http.conf:ro
+      - ./conf/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+      - ./conf/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./conf/rtp.conf:/etc/asterisk/rtp.conf:ro
+      - ./conf/logger.conf:/etc/asterisk/logger.conf:ro
+      - asterisk_sounds:/var/lib/asterisk/sounds
+      - /www/wwwroot/vsms.ominaz.com/storage/app/public/audios:/var/lib/asterisk/sounds/en/audios:ro
+      - /www/wwwroot/vsms.ominaz.com/storage/app/public/audios:/var/lib/asterisk/sounds/audios:ro
+      - /www/wwwroot/vsms.ominaz.com/public/sounds:/var/lib/asterisk/sounds/en/sounds:ro
+      - /www/wwwroot/vsms.ominaz.com/public/sounds:/var/lib/asterisk/sounds/sounds:ro
+      - /www/wwwroot/vsms.ominaz.com/storage/logs/asterisk:/var/log/asterisk
+
+volumes:
+  asterisk_sounds:
