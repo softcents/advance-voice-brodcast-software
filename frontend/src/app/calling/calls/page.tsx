@@ -23,7 +23,11 @@ interface CallItem {
   };
 }
 
+import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders, getActiveUserId, getActiveUserRole } from '@/lib/api';
+
 export default function CallsHistoryPage() {
+  const { activeUser } = useAuth();
   const [calls, setCalls] = useState<CallItem[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -42,13 +46,18 @@ export default function CallsHistoryPage() {
   const fetchCalls = async () => {
     setLoading(true);
     try {
+      const uid = activeUser?.id || getActiveUserId();
+      const role = activeUser?.role || getActiveUserRole();
       const query = new URLSearchParams({
         page: '1',
         limit: '50',
       });
       if (search) query.append('search', search);
+      if (uid && role === 'CUSTOMER') query.append('userId', uid);
 
-      const res = await fetch(`/api/reports/cdr?${query.toString()}`);
+      const res = await fetch(`/api/reports/cdr?${query.toString()}`, {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setCalls(data.records || []);
@@ -63,14 +72,18 @@ export default function CallsHistoryPage() {
 
   const fetchOptions = async () => {
     try {
+      const uid = activeUser?.id || getActiveUserId();
+      const role = activeUser?.role || getActiveUserRole();
+      const query = uid && role === 'CUSTOMER' ? `?userId=${uid}` : '';
       const [audioRes, trunkRes] = await Promise.all([
-        fetch('/api/audio'),
-        fetch('/api/telephony/trunks'),
+        fetch(`/api/audio${query}`, { headers: getAuthHeaders() }),
+        fetch('/api/telephony/trunks', { headers: getAuthHeaders() }),
       ]);
       if (audioRes.ok) {
         const aData = await audioRes.json();
         setAudios(aData);
         if (aData.length > 0) setTestAudioId(aData[0].id);
+        else setTestAudioId('');
       }
       if (trunkRes.ok) {
         const tData = await trunkRes.json();
@@ -88,7 +101,7 @@ export default function CallsHistoryPage() {
   useEffect(() => {
     fetchCalls();
     fetchOptions();
-  }, []);
+  }, [activeUser?.id]);
 
   const handleTriggerTestCall = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,14 +110,16 @@ export default function CallsHistoryPage() {
     setSubmittingTest(true);
     setTestMessage(null);
     try {
+      const uid = activeUser?.id || getActiveUserId();
       const res = await fetch('/api/campaigns/otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           phoneNumber: testPhone,
           otpCode: '123456',
           audioId: testAudioId || undefined,
           trunkId: testTrunkId || undefined,
+          userId: uid,
         }),
       });
 

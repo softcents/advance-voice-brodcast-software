@@ -12,7 +12,11 @@ interface GroupItem {
   _count?: { contacts: number };
 }
 
+import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders, getActiveUserId, getActiveUserRole } from '@/lib/api';
+
 export default function GroupsPage() {
+  const { activeUser } = useAuth();
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,7 +28,12 @@ export default function GroupsPage() {
   const fetchGroups = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/audience/groups');
+      const uid = activeUser?.id || getActiveUserId();
+      const role = activeUser?.role || getActiveUserRole();
+      const query = uid && role === 'CUSTOMER' ? `?userId=${uid}` : '';
+      const res = await fetch(`/api/audience/groups${query}`, {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setGroups(data);
@@ -38,7 +47,7 @@ export default function GroupsPage() {
 
   useEffect(() => {
     fetchGroups();
-  }, []);
+  }, [activeUser?.id]);
 
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,10 +55,11 @@ export default function GroupsPage() {
 
     setSubmitting(true);
     try {
+      const uid = activeUser?.id || getActiveUserId();
       const res = await fetch('/api/audience/groups', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newGroupName }),
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ name: newGroupName, userId: uid }),
       });
       if (res.ok) {
         setShowCreateModal(false);

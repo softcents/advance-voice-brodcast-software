@@ -19,7 +19,11 @@ interface GroupItem {
   name: string;
 }
 
+import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders, getActiveUserId, getActiveUserRole } from '@/lib/api';
+
 export default function ContactsPage() {
+  const { activeUser } = useAuth();
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [search, setSearch] = useState('');
@@ -48,7 +52,9 @@ export default function ContactsPage() {
       if (search) q.append('search', search);
       if (selectedGroupId) q.append('groupId', selectedGroupId);
 
-      const res = await fetch(`/api/audience/contacts?${q.toString()}`);
+      const res = await fetch(`/api/audience/contacts?${q.toString()}`, {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setContacts(data.contacts || []);
@@ -62,11 +68,17 @@ export default function ContactsPage() {
 
   const fetchGroups = async () => {
     try {
-      const res = await fetch('/api/audience/groups');
+      const uid = activeUser?.id || getActiveUserId();
+      const role = activeUser?.role || getActiveUserRole();
+      const query = uid && role === 'CUSTOMER' ? `?userId=${uid}` : '';
+      const res = await fetch(`/api/audience/groups${query}`, {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setGroups(data);
         if (data.length > 0) setTargetGroupId(data[0].id);
+        else setTargetGroupId('');
       }
     } catch (err) {
       console.error('Failed to fetch groups:', err);
@@ -75,7 +87,7 @@ export default function ContactsPage() {
 
   useEffect(() => {
     fetchGroups();
-  }, []);
+  }, [activeUser?.id]);
 
   useEffect(() => {
     fetchContacts();

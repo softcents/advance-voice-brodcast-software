@@ -45,6 +45,17 @@ export class CampaignService {
     if (!group) throw new NotFoundException('Contact group not found');
     if (group.contacts.length === 0) throw new BadRequestException('Contact group has no contacts');
 
+    // Strict Multi-Tenant Isolation
+    const caller = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (caller?.role === 'CUSTOMER') {
+      if (audio.userId && audio.userId !== userId) {
+        throw new BadRequestException('Unauthorized: You can only broadcast your own audio recording.');
+      }
+      if (group.userId && group.userId !== userId) {
+        throw new BadRequestException('Unauthorized: You can only broadcast to your own contact group.');
+      }
+    }
+
     // Default trunk if not supplied
     let trunkId = dto.trunkId;
     if (!trunkId) {

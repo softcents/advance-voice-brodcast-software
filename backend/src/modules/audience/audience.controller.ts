@@ -1,18 +1,34 @@
-import { Controller, Get, Post, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, Headers, BadRequestException } from '@nestjs/common';
 import { AudienceService } from './audience.service';
+import { extractAuthUser } from '../../common/auth-user.helper';
 
 @Controller('audience')
 export class AudienceController {
   constructor(private readonly audienceService: AudienceService) {}
 
   @Get('groups')
-  async getGroups(@Query('userId') userId?: string) {
-    return this.audienceService.getGroups(userId);
+  async getGroups(
+    @Query('userId') queryUserId?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    const auth = extractAuthUser(authHeader, queryUserId);
+    let targetUserId = auth.userId;
+    if (auth.role === 'CUSTOMER') {
+      targetUserId = auth.userId;
+    }
+    return this.audienceService.getGroups(targetUserId);
   }
 
   @Post('groups')
-  async createGroup(@Body() body: { name: string; userId?: string }) {
-    const userId = body.userId || 'ef72a7f3-e48e-47a2-b8cb-1517a5eb4bca';
+  async createGroup(
+    @Body() body: { name: string; userId?: string },
+    @Headers('authorization') authHeader?: string,
+  ) {
+    const auth = extractAuthUser(authHeader, body.userId);
+    const userId = auth.userId;
+    if (!userId) {
+      throw new BadRequestException('User identification required to create contact group');
+    }
     return this.audienceService.createGroup(userId, body.name);
   }
 

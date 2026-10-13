@@ -40,7 +40,11 @@ interface GroupOption {
   _count?: { contacts: number };
 }
 
+import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders, getActiveUserId, getActiveUserRole } from '@/lib/api';
+
 export default function CampaignsPage() {
+  const { activeUser } = useAuth();
   const [campaigns, setCampaigns] = useState<CampaignItem[]>([]);
   const [audioOptions, setAudioOptions] = useState<AudioOption[]>([]);
   const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
@@ -65,7 +69,12 @@ export default function CampaignsPage() {
   const fetchCampaigns = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/campaigns');
+      const uid = activeUser?.id || getActiveUserId();
+      const role = activeUser?.role || getActiveUserRole();
+      const query = uid && role === 'CUSTOMER' ? `?userId=${uid}` : '';
+      const res = await fetch(`/api/campaigns${query}`, {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         setCampaigns(data);
@@ -79,19 +88,24 @@ export default function CampaignsPage() {
 
   const fetchDropdowns = async () => {
     try {
+      const uid = activeUser?.id || getActiveUserId();
+      const role = activeUser?.role || getActiveUserRole();
+      const query = uid && role === 'CUSTOMER' ? `?userId=${uid}` : '';
       const [audioRes, groupRes] = await Promise.all([
-        fetch('/api/audio'),
-        fetch('/api/audience/groups'),
+        fetch(`/api/audio${query}`, { headers: getAuthHeaders() }),
+        fetch(`/api/audience/groups${query}`, { headers: getAuthHeaders() }),
       ]);
       if (audioRes.ok) {
         const audios = await audioRes.json();
         setAudioOptions(audios);
         if (audios.length > 0) setSelectedAudioId(audios[0].id);
+        else setSelectedAudioId('');
       }
       if (groupRes.ok) {
         const groups = await groupRes.json();
         setGroupOptions(groups);
         if (groups.length > 0) setSelectedGroupId(groups[0].id);
+        else setSelectedGroupId('');
       }
     } catch (err) {
       console.error('Failed to load dropdown options:', err);
@@ -101,7 +115,7 @@ export default function CampaignsPage() {
   useEffect(() => {
     fetchCampaigns();
     fetchDropdowns();
-  }, []);
+  }, [activeUser?.id]);
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,19 +123,24 @@ export default function CampaignsPage() {
 
     setSubmittingCampaign(true);
     try {
+      const uid = activeUser?.id || getActiveUserId();
       const res = await fetch('/api/campaigns', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           name: newCampName,
           audioId: selectedAudioId,
           groupId: selectedGroupId,
+          userId: uid,
         }),
       });
       if (res.ok) {
         setShowCampaignModal(false);
         setNewCampName('');
         fetchCampaigns();
+      } else {
+        const err = await res.json();
+        alert(err.message || 'Failed to create campaign');
       }
     } catch (err) {
       console.error('Failed to create campaign:', err);
@@ -134,12 +153,15 @@ export default function CampaignsPage() {
     e.preventDefault();
     setSubmittingOtp(true);
     try {
+      const uid = activeUser?.id || getActiveUserId();
       const res = await fetch('/api/campaigns/otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           phoneNumber: otpPhone,
           otpCode,
+          audioId: selectedAudioId || undefined,
+          userId: uid,
         }),
       });
       if (res.ok) {
@@ -148,6 +170,9 @@ export default function CampaignsPage() {
           setOtpSent(false);
           setShowOtpModal(false);
         }, 1500);
+      } else {
+        const err = await res.json();
+        alert(err.message || 'Failed to send OTP');
       }
     } catch (err) {
       console.error('Failed to send OTP:', err);

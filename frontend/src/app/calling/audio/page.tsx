@@ -30,7 +30,11 @@ interface AudioItem {
   createdAt: string;
 }
 
+import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders, getActiveUserId, getActiveUserRole } from '@/lib/api';
+
 export default function AudioStudioPage() {
+  const { activeUser } = useAuth();
   const [audios, setAudios] = useState<AudioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -54,7 +58,13 @@ export default function AudioStudioPage() {
   const fetchAudios = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/audio', { cache: 'no-store' });
+      const uid = activeUser?.id || getActiveUserId();
+      const role = activeUser?.role || getActiveUserRole();
+      const query = uid && role === 'CUSTOMER' ? `?userId=${uid}` : '';
+      const res = await fetch(`/api/audio${query}`, {
+        headers: getAuthHeaders(),
+        cache: 'no-store',
+      });
       if (res.ok) {
         const data = await res.json();
         setAudios(data);
@@ -74,7 +84,7 @@ export default function AudioStudioPage() {
         audioPlayerRef.current = null;
       }
     };
-  }, []);
+  }, [activeUser?.id]);
 
   // HTML5 audio stream player
   const togglePlay = (id: string) => {
@@ -121,13 +131,21 @@ export default function AudioStudioPage() {
     setSubmitting(true);
     setUploadError(null);
 
+    const uid = activeUser?.id || getActiveUserId();
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('title', title.trim() || selectedFile.name);
+    if (uid) formData.append('userId', uid);
 
     try {
+      const token =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('impersonated_token') || localStorage.getItem('voicepro_token')
+          : null;
+
       const res = await fetch('/api/audio/upload', {
         method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
 
@@ -154,10 +172,12 @@ export default function AudioStudioPage() {
 
     setSubmittingTts(true);
     try {
+      const uid = activeUser?.id || getActiveUserId();
       const res = await fetch('/api/audio', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
+          userId: uid,
           title: ttsTitle,
           originalPath: `audios/tts/${Date.now()}.wav`,
           durationSeconds: Math.max(8, Math.round(ttsText.length / 8)),

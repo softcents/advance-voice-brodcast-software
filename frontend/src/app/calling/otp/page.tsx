@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { KeyRound, Send, CheckCircle2, PhoneCall, ShieldAlert } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { getAuthHeaders, getActiveUserId } from '@/lib/api';
 
 export default function VoiceOtpPage() {
+  const { activeUser } = useAuth();
   const [phone, setPhone] = useState('+8801712345678');
   const [code, setCode] = useState('749201');
   const [status, setStatus] = useState<string | null>(null);
@@ -14,12 +17,14 @@ export default function VoiceOtpPage() {
     setLoading(true);
     setStatus('DISPATCHING');
     try {
+      const uid = activeUser?.id || getActiveUserId();
       const res = await fetch('/api/campaigns/otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           phoneNumber: phone,
           otpCode: code,
+          userId: uid,
         }),
       });
       if (res.ok) {

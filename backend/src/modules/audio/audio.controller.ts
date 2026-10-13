@@ -6,22 +6,33 @@ import {
   Body,
   Param,
   Query,
+  Headers,
   UseInterceptors,
   UploadedFile,
   Res,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { AudioService } from './audio.service';
+import { extractAuthUser } from '../../common/auth-user.helper';
 
 @Controller('audio')
 export class AudioController {
   constructor(private readonly audioService: AudioService) {}
 
   @Get()
-  async getAudios(@Query('userId') userId?: string) {
-    return this.audioService.getAudios(userId);
+  async getAudios(
+    @Query('userId') queryUserId?: string,
+    @Headers('authorization') authHeader?: string,
+  ) {
+    const auth = extractAuthUser(authHeader, queryUserId);
+    let targetUserId = auth.userId;
+    if (auth.role === 'CUSTOMER') {
+      targetUserId = auth.userId;
+    }
+    return this.audioService.getAudios(targetUserId);
   }
 
   @Post('upload')
@@ -29,12 +40,18 @@ export class AudioController {
   async uploadAudio(
     @UploadedFile() file: any,
     @Body('title') title: string,
-    @Body('userId') userId?: string,
+    @Body('userId') bodyUserId?: string,
+    @Headers('authorization') authHeader?: string,
   ) {
     if (!file) {
       throw new NotFoundException('No audio file provided');
     }
-    return this.audioService.uploadAndConvertAudio(file, title, userId);
+    const auth = extractAuthUser(authHeader, bodyUserId);
+    const resolvedUserId = auth.userId;
+    if (!resolvedUserId) {
+      throw new BadRequestException('User identification required for audio upload');
+    }
+    return this.audioService.uploadAndConvertAudio(file, title, resolvedUserId);
   }
 
   @Get(':id/stream')
@@ -55,7 +72,12 @@ export class AudioController {
       ttsText?: string;
       language?: string;
     },
+    @Headers('authorization') authHeader?: string,
   ) {
+    const auth = extractAuthUser(authHeader, body.userId);
+    if (auth.userId) {
+      body.userId = auth.userId;
+    }
     return this.audioService.createAudio(body);
   }
 
