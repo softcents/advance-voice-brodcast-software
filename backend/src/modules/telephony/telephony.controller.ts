@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { FreeSwitchEslService } from './freeswitch-esl.service';
 import axios from 'axios';
 import * as fs from 'fs';
 import { exec } from 'child_process';
@@ -142,16 +143,58 @@ async function syncPjsipConf(prisma: PrismaService): Promise<boolean> {
     }
 
     fs.writeFileSync(PJSIP_CONF_PATH, ini, 'utf-8');
-    exec('docker exec voice-pro-asterisk asterisk -rx "pjsip reload"', () => {});
     return true;
   } catch (e) {
     return false;
   }
 }
 
+async function syncFreeswitchGateways(prisma: PrismaService): Promise<boolean> {
+  try {
+    const trunks = await prisma.sipTrunk.findMany({ where: { enabled: true } });
+    for (const t of trunks) {
+      const isReg = t.type === 'registration' && t.username && t.password;
+      const xml = `<include>\n  <gateway name="${t.name}">\n    <param name="realm" value="${t.host}"/>\n    <param name="proxy" value="${t.host}:${t.port}"/>\n    <param name="register" value="${isReg ? 'true' : 'false'}"/>\n    ${isReg ? `<param name="username" value="${t.username}"/>\n    <param name="password" value="${t.password}"/>` : ''}\n  </gateway>\n</include>\n`;
+      exec(`docker exec voice-pro-freeswitch sh -c "cat << 'EOF' > /etc/freeswitch/sip_profiles/external/${t.name}.xml\n${xml}\nEOF"`, () => {});
+    }
+    exec('docker exec voice-pro-freeswitch fs_cli -x "sofia profile external rescan"', () => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 @Controller('telephony')
 export class TelephonyController {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private freeswitchEsl: FreeSwitchEslService,
+  ) {}
+
+  // -------------------------------------------------------------
+  // FreeSWITCH ESL Telephony Endpoints
+  // -------------------------------------------------------------
+  @Get('freeswitch/status')
+  async getFreeswitchStatus() {
+    return this.freeswitchEsl.getStatus();
+  }
+
+  @Get('freeswitch/sofia')
+  async getSofiaStatus() {
+    const output = await this.freeswitchEsl.getSofiaStatus();
+    return { status: output };
+  }
+
+  @Get('freeswitch/logs')
+  async getFreeswitchLogs() {
+    return this.freeswitchEsl.getLiveLogs();
+  }
+
+  @Post('freeswitch/cmd')
+  async runFsCommand(@Body('cmd') cmd: string) {
+    const res = await this.freeswitchEsl.sendApi(cmd || 'status');
+    return { output: res };
+  }
 
   // -------------------------------------------------------------
   // PBX Servers
@@ -248,6 +291,7 @@ export class TelephonyController {
     });
 
     await syncPjsipConf(this.prisma);
+    await syncFreeswitchGateways(this.prisma);
     return trunk;
   }
 
@@ -297,6 +341,7 @@ export class TelephonyController {
     });
 
     await syncPjsipConf(this.prisma);
+    await syncFreeswitchGateways(this.prisma);
     return trunk;
   }
 
@@ -306,6 +351,7 @@ export class TelephonyController {
       where: { id },
     });
     await syncPjsipConf(this.prisma);
+    await syncFreeswitchGateways(this.prisma);
     return res;
   }
 

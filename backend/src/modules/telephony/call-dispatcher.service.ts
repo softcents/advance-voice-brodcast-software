@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AsteriskAriService } from './asterisk-ari.service';
+import { FreeSwitchEslService } from './freeswitch-esl.service';
 import { CallStatus } from '@prisma/client';
 
 @Injectable()
@@ -9,11 +9,11 @@ export class CallDispatcherService {
 
   constructor(
     private prisma: PrismaService,
-    private ariService: AsteriskAriService,
+    private eslService: FreeSwitchEslService,
   ) {}
 
   /**
-   * Dispatch a pending call onto the Asterisk trunk while enforcing concurrency and strict idempotency
+   * Dispatch a pending call onto FreeSWITCH Sofia SIP trunk while enforcing concurrency and strict idempotency
    */
   async dispatchCall(callId: string) {
     // 1. Atomic state check & transition: Only one worker can acquire this call
@@ -79,15 +79,13 @@ export class CallDispatcherService {
         }),
       ]);
 
-      const originateRes = await this.ariService.originateCall({
+      const originateRes = await this.eslService.originateCall({
         callId: call.id,
         phoneNumber: call.phoneNumber,
         trunkName: trunk.name,
         callerIdName: trunk.name,
         callerIdNumber: trunk.outboundCid || '999',
-        ariBaseUrl: server.ariBaseUrl,
-        ariUsername: server.ariUsername,
-        ariPassword: server.ariPassword,
+        audioFileName: call.audioId ? `audios/${call.audioId}.wav` : 'sounds/post-otp.wav',
         appArgs: call.id,
       });
 

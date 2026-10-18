@@ -108,18 +108,18 @@ export default function VoiceSaaSDashboard() {
     { day: 'Sun', calls: 21250, connected: 17800, revenue: 7440 },
   ];
 
-  // Asterisk logs
-  const asteriskLogs = [
-    `[NOTICE] res_pjsip.c: PJSIP Ready. PJSIP/telco-trunk-01 reachable via 103.234.119.204:5060`,
-    `[VERBOSE] res_pjsip_logger.c: <--- Received SIP response 200 OK from telco-trunk-01 --->`,
-    `[NOTICE] res_ari.c: ARI WebSocket client connected for app 'VoiceProStasis'`,
-    `[VERBOSE] pbx.c: Channel PJSIP/8801711223344-00000001 was created and routed to Stasis`,
-    `[NOTICE] app_stasis.c: Channel entered Stasis application 'VoiceProStasis'`,
-    `[VERBOSE] res_rtp_asterisk.c: Strict RTP learning complete for 103.234.119.204:10042`,
-    `[NOTICE] pbx.c: Channel connected line updated: 8801711223344 (ANSWERED)`,
-    `[VERBOSE] app_playback.c: Playing 'sound:custom_broadcast_promo.wav' (language 'bn-BD')`,
-    `[NOTICE] pbx.c: Channel PJSIP/8801711223344 state changed to Up`,
-    `[NOTICE] app_stasis.c: Channel left Stasis; CDR successfully logged and ledger settled`,
+  // FreeSWITCH ESL Telemetry Logs
+  const freeswitchLogs = [
+    `[NOTICE] mod_event_socket.c: Event socket listening on 127.0.0.1:8021 (ESL Client Ready)`,
+    `[INFO] mod_sofia.c: Sofia SIP profile 'internal' running on 5060 (Host: 138.252.125.207)`,
+    `[INFO] mod_sofia.c: Sofia SIP profile 'external' active on 5080 for Carrier Gateway`,
+    `[NOTICE] switch_core.c: FreeSWITCH 1.11.3 High-CPS Engine online & ready (Max Sessions: 1000)`,
+    `[VERBOSE] mod_event_socket.c: ESL authenticated successfully with password 'ClueCon'`,
+    `[NOTICE] switch_ivr_originate.c: Outbound Sofia call originated for destination 8801711223344`,
+    `[VERBOSE] switch_ivr.c: Playing prompt 'sounds/post-otp.wav' via mod_dptools`,
+    `[NOTICE] switch_core_session.c: Channel sofia/gateway/bdpbx-999/8801711223344 answered`,
+    `[NOTICE] switch_channel.c: Hangup cause: NORMAL_CLEARING (billsec: 32s, duration: 32s)`,
+    `[NOTICE] freeswitch-esl: CDR settled and double-entry ledger updated with PostgreSQL`,
   ];
 
   return (
@@ -453,16 +453,16 @@ export default function VoiceSaaSDashboard() {
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                      <strong className="text-xs text-slate-900">Asterisk ARI Engine 20.9</strong>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <strong className="text-xs text-slate-900">FreeSWITCH 1.11.3 (High-CPS)</strong>
                     </div>
-                    <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                      WebSocket Up
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      ESL Socket Up
                     </span>
                   </div>
                   <div className="flex justify-between text-[11px] text-slate-500">
-                    <span>Dispatch: 50 CPS Limit</span>
-                    <span className="font-mono">RTP Latency: 12ms</span>
+                    <span>Dispatch: 1000 Sessions</span>
+                    <span className="font-mono">Sofia SIP: Port 5060/5080</span>
                   </div>
                 </div>
 
@@ -558,20 +558,20 @@ export default function VoiceSaaSDashboard() {
               </div>
             </div>
 
-            {/* Right: Asterisk Live Terminal */}
+            {/* Right: FreeSWITCH Live Terminal */}
             <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                   <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                    Asterisk PBX Live Terminal
+                    FreeSWITCH ESL Live Terminal
                   </h3>
                 </div>
-                <span className="text-[10px] font-mono text-slate-400">container: asterisk-20</span>
+                <span className="text-[10px] font-mono text-slate-400">container: voice-pro-freeswitch</span>
               </div>
 
               <div className="rounded-xl bg-[#090d16] border border-slate-800 p-3.5 font-mono text-[11px] leading-relaxed max-h-56 overflow-y-auto space-y-1 select-text scrollbar-thin">
-                {asteriskLogs.map((log, idx) => (
+                {freeswitchLogs.map((log, idx) => (
                   <div key={idx} className="text-emerald-400 hover:bg-slate-800/40 px-1 rounded">
                     {log}
                   </div>
@@ -782,7 +782,7 @@ export default function VoiceSaaSDashboard() {
                   </label>
                   <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white">
                     <option>Twilio (Voice API)</option>
-                    <option>Asterisk ARI / PJSIP Trunk</option>
+                    <option>FreeSWITCH ESL / Sofia SIP Trunk</option>
                   </select>
                 </div>
 

@@ -39,8 +39,12 @@ export class AsteriskAriService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.logger.log('Initializing Asterisk ARI WebSocket Stasis connection...');
-    this.connectAriWebSocket();
+    if (process.env.ENABLE_ASTERISK === 'true') {
+      this.logger.log('Initializing Asterisk ARI WebSocket Stasis connection...');
+      this.connectAriWebSocket();
+    } else {
+      this.logger.log('ℹ️ Asterisk ARI disabled. Telephony handled by FreeSWITCH ESL Engine.');
+    }
   }
 
   /**
