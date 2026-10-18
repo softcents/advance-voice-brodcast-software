@@ -113,21 +113,28 @@ export default function ResellerManagementPage() {
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-white flex items-center gap-2.5">
-            <Users2 className="w-6 h-6 text-brand-400" /> Multi-Tier Reseller Hierarchy
-          </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Super Admin ➔ Service Provider (SP) ➔ Master Reseller ➔ Sub-Reseller ➔ End Customer
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-sm ring-1 ring-slate-200/80 flex-shrink-0">
+            <img src="/icons/resellers.svg" alt="Resellers" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              Multi-Tier Reseller Hierarchy
+            </h2>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Super Admin ➔ Service Provider (SP) ➔ Master Reseller ➔ Sub-Reseller ➔ End Customer
+            </p>
+          </div>
         </div>
 
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white keep-white font-semibold text-sm shadow-md shadow-brand-500/20 transition"
         >
-          <UserPlus className="w-4 h-4" />
-          <span>Add New Reseller / Customer</span>
+          <div className="w-4 h-4 rounded overflow-hidden flex-shrink-0">
+            <img src="/icons/customers.svg" alt="" className="w-full h-full object-cover" />
+          </div>
+          <span className="text-white keep-white">Add New Reseller / Customer</span>
         </button>
       </div>
 

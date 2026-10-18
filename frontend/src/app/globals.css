@@ -3,39 +3,261 @@
 @tailwind utilities;
 
 :root {
-  --background: #090d16;
-  --foreground: #f3f4f6;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.011em;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbars */
+/* Clinova Crisp Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', 'Plus Jakarta Sans', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.022em !important;
+  color: #0f172a !important;
+}
+
+strong, b {
+  font-weight: 800 !important;
+}
+
+/* High-contrast readable secondary text */
+.text-slate-500 {
+  color: #475569 !important;
+  font-weight: 500;
+}
+
+.text-slate-400 {
+  color: #64748b !important;
+  font-weight: 500;
+}
+
+.text-gray-500 {
+  color: #4b5563 !important;
+  font-weight: 500;
+}
+
+.text-gray-400 {
+  color: #6b7280 !important;
+  font-weight: 500;
+}
+
+/* Custom scrollbars for clean light UI */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0b0f19;
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1f2937;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #94a3b8;
 }
 
-/* Glassmorphism utility */
+/* Pure Corporate White Glass & Card Panels */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.75);
+  background: #ffffff !important;
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05) !important;
+}
+
+/* ==========================================================================
+   PURE CORPORATE WHITE THEME OVERRIDES (সাদা প্যানেল)
+   Converts dark/slate containers across all routes into crisp modern white
+   ========================================================================== */
+
+/* 1. Main Background Containers to Crisp White */
+.bg-slate-950,
+.bg-slate-950\/90,
+.bg-slate-950\/80,
+.bg-slate-950\/70,
+.bg-slate-950\/60,
+.bg-slate-950\/40,
+.bg-slate-900,
+.bg-slate-900\/95,
+.bg-slate-900\/90,
+.bg-slate-900\/80,
+.bg-slate-900\/70,
+.bg-slate-900\/60,
+.bg-slate-900\/50,
+.bg-slate-900\/40,
+.bg-slate-800,
+.bg-slate-800\/90,
+.bg-slate-800\/80,
+.bg-slate-800\/60,
+.bg-slate-800\/50,
+.bg-gray-950,
+.bg-gray-900,
+.bg-gray-900\/95,
+.bg-gray-900\/90,
+.bg-gray-900\/80,
+.bg-gray-900\/70,
+.bg-gray-900\/60,
+.bg-gray-900\/50,
+.bg-gray-800,
+.bg-gray-800\/90,
+.bg-gray-800\/80,
+.bg-surface-card {
+  background-color: #ffffff !important;
+}
+
+/* App page background */
+.bg-surface-dark {
+  background-color: #f8fafc !important;
+}
+
+/* 2. Soft, Clean Light Borders */
+.border-slate-800,
+.border-slate-800\/80,
+.border-slate-800\/60,
+.border-slate-800\/50,
+.border-slate-700,
+.border-slate-700\/80,
+.border-slate-700\/60,
+.border-gray-800,
+.border-gray-800\/80,
+.border-gray-800\/60,
+.border-gray-700,
+.border-gray-700\/80,
+.border-gray-700\/60,
+.border-surface-border {
+  border-color: #e2e8f0 !important;
+}
+
+/* 3. High-Contrast Text Color Adjustments */
+/* Convert white/light text on dark backgrounds to rich charcoal black (#0f172a) */
+.text-white,
+.text-slate-100,
+.text-slate-200,
+.text-gray-100,
+.text-gray-200 {
+  color: #0f172a !important;
+}
+
+/* Muted secondary text to slate-500 (#64748b) */
+.text-slate-400,
+.text-gray-400,
+.text-slate-500,
+.text-gray-500 {
+  color: #64748b !important;
+}
+
+.text-slate-300,
+.text-gray-300 {
+  color: #334155 !important;
+}
+
+/* 4. PRESERVE WHITE TEXT for Solid Colored Buttons, Badges, Pills & Gradients */
+button.bg-brand-600,
+button.bg-indigo-600,
+button.bg-emerald-600,
+button.bg-rose-600,
+button.bg-blue-600,
+button.bg-purple-600,
+a.bg-brand-600,
+a.bg-indigo-600,
+a.bg-emerald-600,
+a.bg-rose-600,
+a.bg-blue-600,
+[class*="bg-gradient-to-r from-brand-"],
+[class*="bg-gradient-to-r from-indigo-"],
+[class*="bg-gradient-to-r from-emerald-"],
+[class*="bg-gradient-to-tr from-brand-"],
+[class*="bg-brand-600"] *,
+[class*="bg-indigo-600"] *,
+[class*="bg-emerald-600"] *,
+[class*="bg-rose-600"] *,
+[class*="bg-blue-600"] *,
+[class*="bg-brand-500"] *,
+[class*="bg-indigo-500"] *,
+[class*="bg-emerald-500"] *,
+.text-white.keep-white,
+.keep-white {
+  color: #ffffff !important;
+}
+
+/* 5. Inputs, Dropdowns & Form Controls */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* 6. Clean Table Elevation & Contrast */
+table {
+  background-color: #ffffff !important;
+}
+
+thead, thead tr, thead th {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+tbody tr {
+  background-color: #ffffff !important;
+  border-bottom-color: #f1f5f9 !important;
+}
+
+tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+tbody td {
+  color: #1e293b !important;
+}
+
+/* 7. Terminal Console Preservation (Keep dark background for live Asterisk terminal log) */
+.terminal-console,
+.terminal-console * {
+  background-color: #090d16 !important;
+}
+.terminal-console .text-emerald-300,
+.terminal-console .text-emerald-400 {
+  color: #34d399 !important;
+}
+.terminal-console .text-sky-300,
+.terminal-console .text-sky-400 {
+  color: #38bdf8 !important;
+}
+.terminal-console .text-amber-400 {
+  color: #fbbf24 !important;
+}
+.terminal-console .text-rose-400 {
+  color: #f87171 !important;
+}
+.terminal-console .text-slate-300,
+.terminal-console .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* Clean, crisp card shadows */
+.shadow-xl,
+.shadow-2xl,
+.shadow-lg {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05) !important;
 }

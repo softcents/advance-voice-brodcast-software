@@ -75,64 +75,79 @@ export default function WalletPage() {
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Page Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-white flex items-center gap-2.5">
-            <Wallet className="w-6 h-6 text-brand-400" /> Wallet & Financial Ledger
-          </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Double-entry immutable ledger, balance transfers, reservations, and audit statements.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-sm ring-1 ring-slate-200/80 flex-shrink-0">
+            <img src="/icons/wallet.svg" alt="Wallet" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              Wallet & Financial Ledger
+            </h2>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Double-entry immutable ledger, balance transfers, reservations, and audit statements.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowTransferModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 border border-gray-800 hover:border-gray-700 text-gray-200 font-semibold text-xs transition"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition shadow-sm"
           >
-            <Send className="w-4 h-4 text-brand-400" />
+            <div className="w-4 h-4 rounded overflow-hidden flex-shrink-0">
+              <img src="/icons/resellers.svg" alt="Transfer" className="w-full h-full object-cover" />
+            </div>
             <span>Transfer to Sub-Reseller</span>
           </button>
           <button
             onClick={() => setShowRechargeModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-500/20 transition"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white keep-white font-bold text-xs shadow-md shadow-emerald-500/20 transition"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>Recharge Wallet</span>
+            <div className="w-4 h-4 rounded overflow-hidden flex-shrink-0">
+              <img src="/icons/deposits.svg" alt="Recharge" className="w-full h-full object-cover" />
+            </div>
+            <span className="text-white keep-white">Recharge Wallet</span>
           </button>
         </div>
       </div>
 
       {/* Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-brand-900/60 via-gray-900 to-gray-950 border border-brand-500/30 shadow-xl space-y-3">
-          <div className="flex justify-between items-center text-xs font-semibold text-brand-300">
-            <span>Available Balance</span>
-            <CreditCard className="w-4 h-4 text-brand-400" />
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3 relative overflow-hidden group hover:border-slate-300 transition">
+          <div className="flex justify-between items-center text-xs font-semibold text-slate-500">
+            <span className="font-bold uppercase tracking-wider">Available Balance</span>
+            <div className="relative w-9 h-9 rounded-xl overflow-hidden shadow-sm ring-1 ring-emerald-200/80 flex-shrink-0">
+              <img src="/icons/wallet.svg" alt="Balance" className="w-full h-full object-cover" />
+            </div>
           </div>
-          <div className="text-4xl font-black text-white">৳ 500,000.00</div>
-          <div className="text-xs text-gray-400 flex items-center gap-2">
+          <div className="text-4xl font-black text-slate-900">৳ 500,000.00</div>
+          <div className="text-xs text-slate-500 flex items-center gap-2">
             <span>Currency: <strong>BDT</strong></span>
             <span>•</span>
-            <span className="text-emerald-400 font-medium">Reconciled</span>
+            <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Reconciled</span>
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl glass-panel border border-gray-800 space-y-3">
-          <div className="flex justify-between items-center text-xs font-semibold text-amber-400">
-            <span>In-Flight Reserved Balance</span>
-            <Clock className="w-4 h-4 text-amber-400" />
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3 relative overflow-hidden group hover:border-slate-300 transition">
+          <div className="flex justify-between items-center text-xs font-semibold text-amber-700">
+            <span className="font-bold uppercase tracking-wider">In-Flight Reserved Balance</span>
+            <div className="relative w-9 h-9 rounded-xl overflow-hidden shadow-sm ring-1 ring-amber-200/80 flex-shrink-0">
+              <img src="/icons/cdr.svg" alt="Reserved" className="w-full h-full object-cover" />
+            </div>
           </div>
-          <div className="text-4xl font-black text-amber-400">৳ 1,420.00</div>
-          <p className="text-xs text-gray-400">Locked for active campaign calls; adjusts upon hangup.</p>
+          <div className="text-4xl font-black text-amber-600">৳ 1,420.00</div>
+          <p className="text-xs text-slate-500">Locked for active campaign calls; adjusts upon hangup.</p>
         </div>
 
-        <div className="p-6 rounded-2xl glass-panel border border-gray-800 space-y-3">
-          <div className="flex justify-between items-center text-xs font-semibold text-purple-400">
-            <span>Allocated Credit Limit</span>
-            <CheckCircle2 className="w-4 h-4 text-purple-400" />
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3 relative overflow-hidden group hover:border-slate-300 transition">
+          <div className="flex justify-between items-center text-xs font-semibold text-purple-700">
+            <span className="font-bold uppercase tracking-wider">Allocated Credit Limit</span>
+            <div className="relative w-9 h-9 rounded-xl overflow-hidden shadow-sm ring-1 ring-purple-200/80 flex-shrink-0">
+              <img src="/icons/tariffs.svg" alt="Credit" className="w-full h-full object-cover" />
+            </div>
           </div>
-          <div className="text-4xl font-black text-purple-300">৳ 1,000,000.00</div>
-          <p className="text-xs text-gray-400">Postpaid overdraft allowed up to credit threshold.</p>
+          <div className="text-4xl font-black text-purple-700">৳ 1,000,000.00</div>
+          <p className="text-xs text-slate-500">Postpaid overdraft allowed up to credit threshold.</p>
         </div>
       </div>
 

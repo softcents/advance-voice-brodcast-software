@@ -24,12 +24,20 @@ async function syncPjsipConf(prisma: PrismaService): Promise<boolean> {
     ini += '[transport-udp]\n';
     ini += 'type = transport\n';
     ini += 'protocol = udp\n';
-    ini += 'bind = 0.0.0.0:5060\n\n';
+    ini += 'bind = 0.0.0.0:5060\n';
+    ini += 'local_net = 127.0.0.1/32\n';
+    ini += 'local_net = 172.17.0.0/16\n';
+    ini += 'external_media_address = 138.252.125.207\n';
+    ini += 'external_signaling_address = 138.252.125.207\n\n';
 
     ini += '[transport-tcp]\n';
     ini += 'type = transport\n';
     ini += 'protocol = tcp\n';
-    ini += 'bind = 0.0.0.0:5060\n\n';
+    ini += 'bind = 0.0.0.0:5060\n';
+    ini += 'local_net = 127.0.0.1/32\n';
+    ini += 'local_net = 172.17.0.0/16\n';
+    ini += 'external_media_address = 138.252.125.207\n';
+    ini += 'external_signaling_address = 138.252.125.207\n\n';
 
     ini += '; Outbound Trunk Template\n';
     ini += '[trunk-template](!)\n';
@@ -39,8 +47,10 @@ async function syncPjsipConf(prisma: PrismaService): Promise<boolean> {
     ini += 'disallow = all\n';
     ini += 'allow = alaw\n';
     ini += 'allow = ulaw\n';
-    ini += 'allow = g729\n';
     ini += 'direct_media = no\n';
+    ini += 'rtp_symmetric = yes\n';
+    ini += 'force_rport = yes\n';
+    ini += 'rewrite_contact = yes\n';
     ini += 'language = en\n\n';
 
     for (const trunk of trunks) {
@@ -48,7 +58,10 @@ async function syncPjsipConf(prisma: PrismaService): Promise<boolean> {
       const host = trunk.host;
       const port = trunk.port || 5060;
       const transport = trunk.transport || 'transport-udp';
-      const codecs = (trunk.codecs || 'alaw,ulaw,g729').split(',').map((c) => c.trim()).filter(Boolean);
+      const codecs = (trunk.codecs || 'alaw,ulaw')
+        .split(',')
+        .map((c) => c.trim())
+        .filter((c) => c && c.toLowerCase() !== 'g729');
 
       ini += '; -----------------------------------------------------\n';
       ini += `; Trunk: ${name} (${trunk.type.toUpperCase()})\n`;
@@ -74,17 +87,24 @@ async function syncPjsipConf(prisma: PrismaService): Promise<boolean> {
         ini += `transport = ${transport}\n`;
         ini += `context = ${trunk.context || 'from-pstn'}\n`;
         ini += 'disallow = all\n';
-        for (const codec of codecs) {
+        for (const codec of (codecs.length ? codecs : ['alaw', 'ulaw'])) {
           ini += `allow = ${codec}\n`;
         }
         ini += `outbound_auth = ${name}-auth\n`;
         ini += `aors = ${name}-aor\n`;
         ini += `from_user = ${trunk.username}\n`;
         ini += `from_domain = ${host}\n`;
+        ini += `callerid = "${trunk.outboundCid || trunk.username}" <${trunk.outboundCid || trunk.username}>\n`;
         ini += 'direct_media = no\n';
         ini += 'rtp_symmetric = yes\n';
         ini += 'force_rport = yes\n';
-        ini += 'rewrite_contact = yes\n\n';
+        ini += 'rewrite_contact = yes\n';
+        ini += 'trust_id_outbound = yes\n';
+        ini += 'trust_id_inbound = yes\n';
+        ini += 'send_rpid = yes\n';
+        ini += 'send_pai = yes\n';
+        ini += 'rpid_immediate = yes\n';
+        ini += 'timers = no\n\n';
 
         ini += `[${name}-aor]\n`;
         ini += 'type = aor\n';
@@ -95,11 +115,20 @@ async function syncPjsipConf(prisma: PrismaService): Promise<boolean> {
         ini += `transport = ${transport}\n`;
         ini += `context = ${trunk.context || 'from-pstn'}\n`;
         ini += 'disallow = all\n';
-        for (const codec of codecs) {
+        for (const codec of (codecs.length ? codecs : ['alaw', 'ulaw'])) {
           ini += `allow = ${codec}\n`;
         }
         ini += `aors = ${name}-aor\n`;
-        ini += 'direct_media = no\n\n';
+        ini += `callerid = "${trunk.outboundCid || '09612345678'}" <${trunk.outboundCid || '09612345678'}>\n`;
+        ini += 'direct_media = no\n';
+        ini += 'rtp_symmetric = yes\n';
+        ini += 'force_rport = yes\n';
+        ini += 'rewrite_contact = yes\n';
+        ini += 'trust_id_outbound = yes\n';
+        ini += 'send_rpid = yes\n';
+        ini += 'send_pai = yes\n';
+        ini += 'rpid_immediate = yes\n';
+        ini += 'timers = no\n\n';
 
         ini += `[${name}-aor]\n`;
         ini += 'type = aor\n';
@@ -209,7 +238,7 @@ export class TelephonyController {
         username: body.username || null,
         password: body.password || null,
         outboundCid: body.outboundCid || null,
-        codecs: body.codecs || 'alaw,ulaw,g729',
+        codecs: body.codecs || 'alaw,ulaw',
         context: body.context || 'from-pstn',
         maxConcurrency: body.maxConcurrency || 30,
         enabled: body.enabled !== undefined ? body.enabled : true,

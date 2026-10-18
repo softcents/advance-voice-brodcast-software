@@ -1,9 +1,10 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PricingService } from '../pricing/pricing.service';
 import { CampaignStatus, CallStatus, ReferenceType } from '@prisma/client';
 import { CallDispatcherService } from '../telephony/call-dispatcher.service';
+import { QueueService } from '../queue/queue.service';
 
 export interface CreateCampaignDto {
   name: string;
@@ -27,6 +28,8 @@ export class CampaignService {
     private walletService: WalletService,
     private pricingService: PricingService,
     private callDispatcher: CallDispatcherService,
+    @Inject(forwardRef(() => QueueService))
+    private queueService: QueueService,
   ) {}
 
   /**
@@ -47,12 +50,29 @@ export class CampaignService {
 
     // Strict Multi-Tenant Isolation
     const caller = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (caller?.role === 'CUSTOMER') {
-      if (audio.userId && audio.userId !== userId) {
-        throw new BadRequestException('Unauthorized: You can only broadcast your own audio recording.');
-      }
-      if (group.userId && group.userId !== userId) {
-        throw new BadRequestException('Unauthorized: You can only broadcast to your own contact group.');
+    if (!caller) throw new NotFoundException('Authenticated user not found');
+
+    if (caller.role !== 'SUPER_ADMIN') {
+      if (caller.role === 'CUSTOMER') {
+        if (audio.userId !== userId) {
+          throw new BadRequestException('Unauthorized: You can only broadcast your own audio recording.');
+        }
+        if (group.userId !== userId) {
+          throw new BadRequestException('Unauthorized: You can only broadcast to your own contact group.');
+        }
+      } else {
+        // Reseller hierarchy check
+        const [audioOwner, groupOwner] = await Promise.all([
+          this.prisma.user.findUnique({ where: { id: audio.userId } }),
+          this.prisma.user.findUnique({ where: { id: group.userId } }),
+        ]);
+        const callerPath = caller.path || caller.id;
+        if (audio.userId !== userId && !audioOwner?.path?.startsWith(callerPath)) {
+          throw new BadRequestException('Unauthorized: Audio asset belongs outside your reseller hierarchy.');
+        }
+        if (group.userId !== userId && !groupOwner?.path?.startsWith(callerPath)) {
+          throw new BadRequestException('Unauthorized: Contact group belongs outside your reseller hierarchy.');
+        }
       }
     }
 
@@ -96,10 +116,11 @@ export class CampaignService {
         },
       });
 
-      // Expand contacts into CallRecords
+      // Expand contacts into CallRecords with exact Contact ID and Phone Number
       const callData = group.contacts.map((contact) => ({
         userId,
         campaignId: campaign.id,
+        contactId: contact.id,
         trunkId,
         audioId: dto.audioId,
         phoneNumber: contact.phoneNumber,
@@ -120,25 +141,22 @@ export class CampaignService {
   }
 
   /**
-   * Dispatch campaign calls in paced batches respecting concurrency
+   * Dispatch campaign calls via durable RabbitMQ queue with persistent storage
    */
   async dispatchCampaignCalls(campaignId: string) {
+    const campaign = await this.prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { id: true, userId: true },
+    });
+    if (!campaign) return;
+
     const pendingCalls = await this.prisma.callRecord.findMany({
       where: { campaignId, status: CallStatus.PENDING },
-      take: 200,
+      select: { id: true },
     });
 
     for (const call of pendingCalls) {
-      try {
-        const res = await this.callDispatcher.dispatchCall(call.id);
-        if (res?.requeue) {
-          await new Promise((r) => setTimeout(r, 2000));
-        } else {
-          await new Promise((r) => setTimeout(r, 250));
-        }
-      } catch (e) {
-        // continue
-      }
+      await this.queueService.publishCampaignCall(campaign.id, call.id, campaign.userId);
     }
   }
 
@@ -160,7 +178,7 @@ export class CampaignService {
     const pricing = await this.pricingService.calculateCallCost(userId, dto.phoneNumber, 10);
     const estimatedCost = pricing.sellingPrice;
 
-    const callId = `OTP-${Date.now()}`;
+    const callId = dto.audioId ? `TEST-${Date.now()}` : `OTP-${Date.now()}`;
     await this.walletService.reserveCallCost(userId, estimatedCost, callId, ReferenceType.CALL);
 
     const callRecord = await this.prisma.callRecord.create({
@@ -171,7 +189,7 @@ export class CampaignService {
         audioId: dto.audioId,
         phoneNumber: dto.phoneNumber,
         callerId: trunk.outboundCid || '999',
-        isOtp: true,
+        isOtp: !dto.audioId,
         otpCode: dto.otpCode,
         status: CallStatus.PENDING,
         sellingPrice: estimatedCost,

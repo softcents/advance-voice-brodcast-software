@@ -73,6 +73,17 @@ enum ExportStatus {
   FAILED
 }
 
+enum IvrOrderStatus {
+  PENDING
+  CALLING
+  CONFIRMED
+  CANCELLATION_REQUESTED
+  CANCELLED
+  CALLBACK_SCHEDULED
+  FAILED
+  EXPIRED
+}
+
 // -------------------------------------------------------------
 // 1. User & Reseller Hierarchy
 // -------------------------------------------------------------
@@ -130,6 +141,11 @@ model User {
   contactGroups         ContactGroup[]
   sipTrunks             SipTrunk[]
   callers               CallerId[]
+  ivrFlows              IvrFlow[]
+  ivrOrders             IvrOrder[]
+  ivrCallbacks          IvrCallback[]
+  resellerBrand         ResellerBrand?
+  auditLogs             AuditLog[]
 
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
@@ -373,6 +389,10 @@ model AudioAsset {
 
   campaigns       Campaign[]
   calls           CallRecord[]
+  welcomeIvrFlows IvrFlow[]     @relation("WelcomeAudio")
+  confirmIvrFlows IvrFlow[]     @relation("ConfirmAudio")
+  cancelIvrFlows  IvrFlow[]     @relation("CancelAudio")
+  callbackIvrFlows IvrFlow[]    @relation("CallbackAudio")
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -405,6 +425,8 @@ model Contact {
   name        String?
   phoneNumber String
   customData  Json?
+
+  calls       CallRecord[]
 
   createdAt   DateTime      @default(now())
 
@@ -460,15 +482,20 @@ model CallRecord {
   user            User         @relation(fields: [userId], references: [id])
   campaignId      String?
   campaign        Campaign?    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contactId       String?
+  contact         Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
   trunkId         String?
   trunk           SipTrunk?    @relation(fields: [trunkId], references: [id])
   audioId         String?
   audio           AudioAsset?  @relation(fields: [audioId], references: [id])
+  ivrOrderId      String?
+  ivrOrder        IvrOrder?    @relation(fields: [ivrOrderId], references: [id], onDelete: SetNull)
 
   // Call Attributes
   phoneNumber     String
   callerId        String
   uniqueId        String?      // Asterisk uniqueid
+  linkedId        String?      // Asterisk linkedid
   channelId       String?
   isOtp           Boolean      @default(false)
   otpCode         String?
@@ -494,8 +521,10 @@ model CallRecord {
 
   @@index([userId])
   @@index([campaignId])
+  @@index([contactId])
   @@index([status])
   @@index([uniqueId])
+  @@index([linkedId])
   @@index([createdAt])
   @@index([phoneNumber])
 }
@@ -522,3 +551,165 @@ model ReportExport {
   @@index([userId])
   @@index([status])
 }
+
+// -------------------------------------------------------------
+// 8. Outbound IVR & Automated Order Confirmation
+// -------------------------------------------------------------
+
+model IvrFlow {
+  id                    String        @id @default(uuid())
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                  String
+  description           String?
+
+  // Prompts & Audios
+  welcomeAudioId        String?
+  welcomeAudio          AudioAsset?   @relation("WelcomeAudio", fields: [welcomeAudioId], references: [id], onDelete: SetNull)
+  welcomeTtsText        String?
+
+  confirmAudioId        String?
+  confirmAudio          AudioAsset?   @relation("ConfirmAudio", fields: [confirmAudioId], references: [id], onDelete: SetNull)
+  confirmTtsText        String?       @default("আপনার অর্ডারটি সফলভাবে নিশ্চিত করা হয়েছে। ধন্যবাদ।")
+
+  cancelAudioId         String?
+  cancelAudio           AudioAsset?   @relation("CancelAudio", fields: [cancelAudioId], references: [id], onDelete: SetNull)
+  cancelTtsText         String?       @default("আপনার অর্ডার বাতিলের অনুরোধ গ্রহণ করা হয়েছে। প্রতিনিধি আপনার সাথে যোগাযোগ করবেন।")
+
+  callbackAudioId       String?
+  callbackAudio         AudioAsset?   @relation("CallbackAudio", fields: [callbackAudioId], references: [id], onDelete: SetNull)
+  callbackTtsText       String?       @default("আপনার কলব্যাক অনুরোধ রেকর্ড করা হয়েছে। শীঘ্রই কল করা হবে।")
+
+  // Keypad Mappings
+  confirmKey            String        @default("1")
+  cancelKey             String        @default("2")
+  callbackKey           String        @default("3")
+  transferKey           String        @default("0")
+  transferDestination   String?       // Extension (e.g. 100) or SIP Trunk URI
+
+  // Flow Logic Controls
+  maxRepeats            Int           @default(2)
+  timeoutSeconds        Int           @default(6)
+  fallbackAction        String        @default("HANGUP") // HANGUP, TRANSFER, REPEAT
+  autoCancelPolicy      Boolean       @default(false) // If true, cancellation request automatically marks order CANCELLED
+  isDefault             Boolean       @default(false)
+  isActive              Boolean       @default(true)
+
+  orders                IvrOrder[]
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([userId])
+}
+
+model IvrOrder {
+  id                    String          @id @default(uuid())
+  userId                String
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resellerId            String?
+
+  orderNumber           String
+  customerName          String?
+  customerPhone         String
+  orderAmount           Decimal         @default(0.00) @db.Decimal(12, 2)
+  currency              String          @default("BDT")
+  itemsSummary          String?
+  metadata              Json?
+
+  status                IvrOrderStatus  @default(PENDING)
+  dtmfPressed           String?         // '1', '2', '3', '0'
+
+  flowId                String?
+  flow                  IvrFlow?        @relation(fields: [flowId], references: [id], onDelete: SetNull)
+
+  callRecords           CallRecord[]
+
+  // Retry & Scheduling
+  attempts              Int             @default(0)
+  maxAttempts           Int             @default(3)
+  nextAttemptAt         DateTime?
+  lastAttemptAt         DateTime?
+
+  // Webhook Dispatch
+  webhookUrl            String?
+  webhookStatus         String?         // PENDING, DELIVERED, FAILED
+  webhookAttempts       Int             @default(0)
+  webhookResponse       String?
+
+  confirmedAt           DateTime?
+  cancelledAt           DateTime?
+  notes                 String?
+
+  callbacks             IvrCallback[]
+
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([customerPhone])
+  @@index([orderNumber])
+  @@index([status])
+  @@index([nextAttemptAt])
+}
+
+model IvrCallback {
+  id                    String        @id @default(uuid())
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId               String?
+  order                 IvrOrder?     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  customerPhone         String
+  scheduledAt           DateTime
+  status                String        @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+  notes                 String?
+  callAttempts          Int           @default(0)
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([scheduledAt])
+  @@index([status])
+}
+
+model ResellerBrand {
+  id                    String        @id @default(uuid())
+  resellerId            String        @unique
+  user                  User          @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  customDomain          String?       @unique
+  brandName             String
+  logoUrl               String?
+  faviconUrl            String?
+  primaryColor          String        @default("#2563eb")
+  secondaryColor        String        @default("#1e40af")
+  supportEmail          String?
+  supportPhone          String?
+  footerText            String?
+  isVerified            Boolean       @default(false)
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+model AuditLog {
+  id                    String        @id @default(uuid())
+  userId                String?
+  user                  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  action                String        // e.g. "TARIFF_UPDATE", "CREDIT_LIMIT_APPROVE", "IVR_FLOW_MODIFY"
+  entityType            String        // "USER", "TARIFF", "ORDER", "CAMPAIGN"
+  entityId              String?
+  details               Json?
+  ipAddress             String?
+
+  createdAt             DateTime      @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+}
+

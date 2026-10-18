@@ -578,11 +578,20 @@ export class ReportingService {
 
     const where: Prisma.CallRecordWhereInput = {};
 
-    if (currentUserRole !== Role.SUPER_ADMIN) {
+    if (currentUserRole === Role.CUSTOMER) {
+      where.userId = currentUserId;
+    } else if (currentUserRole !== Role.SUPER_ADMIN) {
       where.user = { path: { startsWith: currentUserPath } };
     }
 
-    if (filter.targetUserId) where.userId = filter.targetUserId;
+    if (filter.targetUserId) {
+      if (currentUserRole === Role.SUPER_ADMIN) {
+        where.userId = filter.targetUserId;
+      } else if (currentUserRole !== Role.CUSTOMER) {
+        // Reseller filtering a specific child
+        where.userId = filter.targetUserId;
+      }
+    }
     if (filter.status) where.status = filter.status;
     if (filter.campaignId) where.campaignId = filter.campaignId;
     if (filter.phoneNumber) where.phoneNumber = { contains: filter.phoneNumber };
@@ -600,6 +609,12 @@ export class ReportingService {
         include: {
           user: {
             select: { id: true, name: true, email: true, companyName: true, role: true },
+          },
+          contact: {
+            select: { id: true, name: true, phoneNumber: true },
+          },
+          audio: {
+            select: { id: true, title: true, durationSeconds: true },
           },
           campaign: {
             select: { id: true, name: true },
@@ -795,4 +810,143 @@ export class ReportingService {
       },
     };
   }
+
+  /**
+   * 9. Outbound IVR & Order Confirmation Conversion Analytics
+   */
+  async getIvrOrderConversionReport(
+    currentUserId: string,
+    currentUserRole: string,
+    currentUserPath: string,
+    filter: any = {},
+  ) {
+    const { start, end } = this.resolveDateRange(filter.preset, filter.startDate, filter.endDate);
+
+    const where: any = {
+      createdAt: { gte: start, lte: end },
+    };
+
+    if (currentUserRole === Role.CUSTOMER) {
+      where.userId = currentUserId;
+    } else if (currentUserRole !== Role.SUPER_ADMIN) {
+      where.OR = [
+        { userId: currentUserId },
+        { user: { path: { startsWith: currentUserPath } } },
+      ];
+    }
+
+    const orders = await this.prisma.ivrOrder.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        flow: { select: { id: true, name: true } },
+        callRecords: {
+          select: {
+            duration: true,
+            billableSeconds: true,
+            sellingPrice: true,
+            costPrice: true,
+            grossProfit: true,
+          },
+        },
+      },
+    });
+
+    const totalOrders = orders.length;
+    let confirmedCount = 0;
+    let cancelledCount = 0;
+    let cancellationRequestedCount = 0;
+    let callbackCount = 0;
+    let failedCount = 0;
+    let totalRevenue = 0;
+    let totalCost = 0;
+    let totalBillableSeconds = 0;
+
+    orders.forEach((o) => {
+      if (o.status === 'CONFIRMED') confirmedCount++;
+      else if (o.status === 'CANCELLED') cancelledCount++;
+      else if (o.status === 'CANCELLATION_REQUESTED') cancellationRequestedCount++;
+      else if (o.status === 'CALLBACK_SCHEDULED') callbackCount++;
+      else if (o.status === 'FAILED') failedCount++;
+
+      o.callRecords?.forEach((c) => {
+        totalRevenue += Number(c.sellingPrice || 0);
+        totalCost += Number(c.costPrice || 0);
+        totalBillableSeconds += Number(c.billableSeconds || 0);
+      });
+    });
+
+    const conversionRate = totalOrders > 0 ? Number(((confirmedCount / totalOrders) * 100).toFixed(2)) : 0;
+    const cancellationRate = totalOrders > 0 ? Number((((cancelledCount + cancellationRequestedCount) / totalOrders) * 100).toFixed(2)) : 0;
+    const costPerConfirmedOrder = confirmedCount > 0 ? Number((totalRevenue / confirmedCount).toFixed(2)) : 0;
+    const grossProfit = Number((totalRevenue - totalCost).toFixed(2));
+
+    return {
+      dateRange: { start, end },
+      summary: {
+        totalOrders,
+        confirmedCount,
+        cancelledCount,
+        cancellationRequestedCount,
+        callbackCount,
+        failedCount,
+        conversionRate,
+        cancellationRate,
+        costPerConfirmedOrder,
+        totalRevenue: Number(totalRevenue.toFixed(2)),
+        totalCost: Number(totalCost.toFixed(2)),
+        grossProfit,
+        totalBillableSeconds,
+      },
+      orders: orders.slice(0, 100),
+    };
+  }
+
+  /**
+   * 10. Generate XLSX file for IVR Order Confirmations
+   */
+  async generateIvrOrdersExcelExport(orders: any[]): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'VoiceBroadcastPro';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('IVR Orders Report');
+    sheet.columns = [
+      { header: 'Order Number', key: 'orderNumber', width: 18 },
+      { header: 'Customer Name', key: 'customerName', width: 22 },
+      { header: 'Phone Number', key: 'customerPhone', width: 18 },
+      { header: 'Order Amount', key: 'orderAmount', width: 15 },
+      { header: 'Status', key: 'status', width: 24 },
+      { header: 'Keypad (DTMF)', key: 'dtmfPressed', width: 14 },
+      { header: 'Webhook Status', key: 'webhookStatus', width: 16 },
+      { header: 'Attempts', key: 'attempts', width: 12 },
+      { header: 'Confirmed At', key: 'confirmedAt', width: 22 },
+      { header: 'Created At', key: 'createdAt', width: 22 },
+    ];
+
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1E293B' },
+    };
+
+    orders.forEach((o) => {
+      sheet.addRow({
+        orderNumber: o.orderNumber,
+        customerName: o.customerName || 'N/A',
+        customerPhone: o.customerPhone,
+        orderAmount: `${o.orderAmount} ${o.currency || 'BDT'}`,
+        status: o.status,
+        dtmfPressed: o.dtmfPressed ? `Key ${o.dtmfPressed}` : 'None',
+        webhookStatus: o.webhookStatus || 'N/A',
+        attempts: o.attempts,
+        confirmedAt: o.confirmedAt ? new Date(o.confirmedAt).toLocaleString() : 'N/A',
+        createdAt: new Date(o.createdAt).toLocaleString(),
+      });
+    });
+
+    return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
+  }
 }
+

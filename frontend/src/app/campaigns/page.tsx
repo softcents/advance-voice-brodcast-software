@@ -195,37 +195,46 @@ export default function CampaignsPage() {
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-white flex items-center gap-2.5">
-            <Megaphone className="w-6 h-6 text-brand-400" /> Voice Campaign Studio & Voice OTP
-          </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Broadcast promotional voice campaigns to bulk contact lists, or trigger low-latency voice OTPs via Asterisk PBX.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-md ring-1 ring-purple-200/80 flex-shrink-0">
+            <img src="/icons/broadcast.jpg" alt="Campaigns" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              Voice Campaign Studio & Voice OTP
+            </h2>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Broadcast promotional voice campaigns to bulk contact lists, or trigger low-latency voice OTPs via Asterisk PBX.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={fetchCampaigns}
             disabled={loading}
-            className="p-2.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white transition"
+            className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 transition shadow-sm"
             title="Refresh list"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-600' : ''}`} />
           </button>
           <button
             onClick={() => setShowOtpModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 border border-gray-800 hover:border-gray-700 text-gray-200 font-semibold text-xs transition"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs transition shadow-sm"
           >
-            <KeyRound className="w-4 h-4 text-brand-400" />
+            <div className="w-4 h-4 rounded overflow-hidden flex-shrink-0">
+              <img src="/icons/otp.svg" alt="OTP" className="w-full h-full object-cover" />
+            </div>
             <span>Send Voice OTP</span>
           </button>
           <button
             onClick={() => setShowCampaignModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-500/20 transition"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 text-white keep-white font-bold text-xs shadow-md shadow-brand-500/20 transition"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>New Voice Broadcast</span>
+            <div className="w-4 h-4 rounded overflow-hidden flex-shrink-0">
+              <img src="/icons/broadcast.jpg" alt="" className="w-full h-full object-cover" />
+            </div>
+            <span className="text-white keep-white">New Voice Broadcast</span>
           </button>
         </div>
       </div>

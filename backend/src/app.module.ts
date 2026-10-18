@@ -10,6 +10,8 @@ import { TelephonyModule } from './modules/telephony/telephony.module';
 import { CampaignModule } from './modules/campaign/campaign.module';
 import { AudienceModule } from './modules/audience/audience.module';
 import { AudioModule } from './modules/audio/audio.module';
+import { IvrModule } from './modules/ivr/ivr.module';
+import { QueueModule } from './modules/queue/queue.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { AudioModule } from './modules/audio/audio.module';
     TelephonyModule,
     AudienceModule,
     AudioModule,
+    IvrModule,
+    QueueModule,
   ],
 })
 export class AppModule {}

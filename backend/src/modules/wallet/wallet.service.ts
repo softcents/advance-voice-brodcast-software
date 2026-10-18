@@ -299,12 +299,36 @@ export class WalletService {
    * Reconcile & Settle Final Call Charge against actual billable seconds
    */
   async settleCallUsage(dto: SettleCallCostDto) {
+    if (dto.idempotencyKey) {
+      const existing = await this.prisma.ledgerEntry.findUnique({
+        where: { idempotencyKey: dto.idempotencyKey },
+      });
+      if (existing) {
+        return {
+          settled: true,
+          alreadySettled: true,
+          actualCost: 0,
+          finalBalance: 0,
+        };
+      }
+    }
+
     const pulses = dto.billableSeconds > 0 ? Math.ceil(dto.billableSeconds / dto.pulseDuration) : 0;
     const finalActualCost = new Prisma.Decimal(pulses * dto.pulseRate);
     const reservedCost = new Prisma.Decimal(dto.reservedCost);
     const costDifference = finalActualCost.minus(reservedCost); // > 0: undercharged, < 0: overcharged
 
     return this.prisma.$transaction(async (tx) => {
+      // Re-check idempotency inside transaction for strict race safety
+      if (dto.idempotencyKey) {
+        const existingTx = await tx.ledgerEntry.findUnique({
+          where: { idempotencyKey: dto.idempotencyKey },
+        });
+        if (existingTx) {
+          return { settled: true, alreadySettled: true, actualCost: finalActualCost.toNumber() };
+        }
+      }
+
       const wallet = await tx.wallet.findUnique({
         where: { userId: dto.userId },
       });
@@ -326,6 +350,8 @@ export class WalletService {
         afterBal = beforeBal.plus(refundAmount);
         transactionType = TransactionType.REFUND;
         diffAmount = refundAmount;
+      } else {
+        transactionType = TransactionType.RELEASE;
       }
 
       // Release reserved balance
@@ -338,25 +364,26 @@ export class WalletService {
         },
       });
 
-      if (!diffAmount.isZero()) {
-        await tx.ledgerEntry.create({
-          data: {
-            walletId: wallet.id,
-            userId: dto.userId,
-            type: transactionType,
-            amount: diffAmount,
-            balanceBefore: beforeBal,
-            balanceAfter: afterBal,
-            referenceType: ReferenceType.CALL,
-            referenceId: dto.callId,
-            idempotencyKey: dto.idempotencyKey,
-            description:
-              transactionType === TransactionType.REFUND
-                ? `Refund adjustment for Call #${dto.callId} (${dto.billableSeconds}s billable)`
-                : `Extra charge adjustment for Call #${dto.callId} (${dto.billableSeconds}s billable)`,
-          },
-        });
-      }
+      // Persist ledger entry with idempotency key
+      await tx.ledgerEntry.create({
+        data: {
+          walletId: wallet.id,
+          userId: dto.userId,
+          type: transactionType,
+          amount: diffAmount,
+          balanceBefore: beforeBal,
+          balanceAfter: afterBal,
+          referenceType: ReferenceType.CALL,
+          referenceId: dto.callId,
+          idempotencyKey: dto.idempotencyKey,
+          description:
+            transactionType === TransactionType.REFUND
+              ? `Refund adjustment for Call #${dto.callId} (${dto.billableSeconds}s billable)`
+              : transactionType === TransactionType.DEBIT
+              ? `Extra charge adjustment for Call #${dto.callId} (${dto.billableSeconds}s billable)`
+              : `Final settlement and release for Call #${dto.callId} (${dto.billableSeconds}s billable)`,
+        },
+      });
 
       return {
         settled: true,

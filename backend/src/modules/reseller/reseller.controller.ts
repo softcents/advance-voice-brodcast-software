@@ -66,4 +66,27 @@ export class ResellerController {
   ) {
     return this.resellerService.updateStatus(targetId, status, user.role);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('branding')
+  async getMyBranding(@CurrentUser() user: AuthenticatedUser) {
+    return this.resellerService.getResellerBrand(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('branding')
+  async updateMyBranding(@CurrentUser() user: AuthenticatedUser, @Body() body: any) {
+    return this.resellerService.updateResellerBrand(user.id, body);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Patch(':id/credit-limit')
+  async updateCreditLimit(
+    @Param('id') resellerId: string,
+    @Body('creditLimit') creditLimit: number,
+    @Body('allowNegativeBalance') allowNegativeBalance: boolean,
+  ) {
+    return this.resellerService.updateCreditLimit(resellerId, Number(creditLimit || 0), Boolean(allowNegativeBalance));
+  }
 }
+

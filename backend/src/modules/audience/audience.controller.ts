@@ -12,10 +12,7 @@ export class AudienceController {
     @Headers('authorization') authHeader?: string,
   ) {
     const auth = extractAuthUser(authHeader, queryUserId);
-    let targetUserId = auth.userId;
-    if (auth.role === 'CUSTOMER') {
-      targetUserId = auth.userId;
-    }
+    const targetUserId = auth.role === 'SUPER_ADMIN' ? (queryUserId || auth.userId) : auth.userId;
     return this.audienceService.getGroups(targetUserId);
   }
 

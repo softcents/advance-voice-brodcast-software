@@ -157,7 +157,7 @@ export class PricingService {
         sellingPrice: 0,
         grossProfit: 0,
         resellerMargin: 0,
-        rateCardId: matchedCard.id,
+        rateCardId,
       };
     }
 

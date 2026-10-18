@@ -23,10 +23,13 @@ const config: Config = {
           900: "#312e81",
         },
         surface: {
-          dark: "#0b0f19",
-          card: "#111827",
-          border: "#1f2937",
+          dark: "#f8fafc",
+          card: "#ffffff",
+          border: "#e2e8f0",
         },
+      },
+      fontFamily: {
+        sans: ['"Inter"', '"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
       },
     },
   },

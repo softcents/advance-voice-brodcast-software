@@ -24,6 +24,7 @@ import {
   ArrowUpRight,
   SlidersHorizontal,
 } from 'lucide-react';
+import { getAuthHeaders } from '@/lib/api';
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<'clients' | 'daily' | 'campaigns' | 'cdr' | 'statement'>('clients');
@@ -311,7 +312,10 @@ export default function ReportsPage() {
       ...(searchQuery ? { search: searchQuery } : {}),
     });
 
-    fetch(`/api/reports/sales?${params}`, { cache: 'no-store' })
+    fetch(`/api/reports/sales?${params}`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.kpi) {
@@ -364,17 +368,22 @@ export default function ReportsPage() {
         <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Voice SMS PBX Financial Intelligence
+          <div className="flex items-center gap-4">
+            <div className="relative w-14 h-14 rounded-2xl overflow-hidden shadow-lg ring-2 ring-emerald-400/50 flex-shrink-0">
+              <img src="/icons/reports.svg" alt="Reports" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white">
-              Sales & Profit Analytics <span className="text-emerald-400 font-semibold">(বিক্রয় ও লাভ রিপোর্ট)</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-gray-300 mt-1 max-w-2xl">
-              টেলিকম ক্যারিয়ার কেনা খরচ, ক্লায়েন্ট বিলিং রেট এবং নীট লাভের (Net Profit & Margin) সম্পূর্ণ রিয়েল-টাইম হিসাব।
-            </p>
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Voice SMS PBX Financial Intelligence
+              </div>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white">
+                Sales & Profit Analytics <span className="text-emerald-400 font-semibold">(বিক্রয় ও লাভ রিপোর্ট)</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-300 mt-1 max-w-2xl">
+                টেলিকম ক্যারিয়ার কেনা খরচ, ক্লায়েন্ট বিলিং রেট এবং নীট লাভের (Net Profit & Margin) সম্পূর্ণ রিয়েল-টাইম হিসাব।
+              </p>
+            </div>
           </div>
 
           {/* Quick Export Actions */}
@@ -537,27 +546,27 @@ export default function ReportsPage() {
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Net Profit (মোট লাভ) - Emerald */}
-        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-teal-500/5 to-transparent border border-emerald-500/30 bg-white dark:bg-gray-900 shadow-md">
+        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-teal-500/5 to-transparent border border-emerald-500/30 bg-white shadow-md">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="text-xs font-semibold text-emerald-600">
                 Net Profit (মোট লাভ)
               </span>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400">আয় - টেলিকম খরচ</div>
+              <div className="text-[11px] text-slate-500">আয় - টেলিকম খরচ</div>
             </div>
-            <div className="p-2.5 rounded-xl bg-emerald-500 text-white shadow-md shadow-emerald-500/30">
-              <TrendingUp className="w-5 h-5" />
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-emerald-300 flex-shrink-0">
+              <img src="/icons/reports.svg" alt="Profit" className="w-full h-full object-cover" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight">
+            <div className="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight">
               BDT {reportData.kpi.net_profit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </div>
             <div className="mt-2 flex items-center justify-between text-xs">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800">
                 {reportData.kpi.profit_margin}% Margin
               </span>
-              <span className="text-gray-400 text-[11px]">
+              <span className="text-slate-500 text-[11px]">
                 {reportData.kpi.total_pulses.toLocaleString()} pulses billed
               </span>
             </div>
@@ -565,25 +574,25 @@ export default function ReportsPage() {
         </div>
 
         {/* 2. Total Deposits (মোট রিচার্জ) - Blue */}
-        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-blue-500/15 via-indigo-500/5 to-transparent border border-blue-500/30 bg-white dark:bg-gray-900 shadow-md">
+        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-blue-500/15 via-indigo-500/5 to-transparent border border-blue-500/30 bg-white shadow-md">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+              <span className="text-xs font-semibold text-blue-600">
                 Total Deposits (মোট রিচার্জ)
               </span>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400">গ্রাহকদের জমা করা টাকা</div>
+              <div className="text-[11px] text-slate-500">গ্রাহকদের জমা করা টাকা</div>
             </div>
-            <div className="p-2.5 rounded-xl bg-blue-500 text-white shadow-md shadow-blue-500/30">
-              <Banknote className="w-5 h-5" />
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-blue-300 flex-shrink-0">
+              <img src="/icons/deposits.svg" alt="Deposits" className="w-full h-full object-cover" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               BDT {reportData.kpi.total_deposits.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </div>
-            <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
               <span>{reportData.kpi.deposits_count} transactions</span>
-              <span className="font-medium text-gray-300">
+              <span className="font-medium text-slate-600">
                 Balance: BDT {reportData.kpi.total_user_balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -591,23 +600,23 @@ export default function ReportsPage() {
         </div>
 
         {/* 3. Call Revenue (কল বিলিং আয়) - Indigo */}
-        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-indigo-500/15 via-purple-500/5 to-transparent border border-indigo-500/30 bg-white dark:bg-gray-900 shadow-md">
+        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-indigo-500/15 via-purple-500/5 to-transparent border border-indigo-500/30 bg-white shadow-md">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+              <span className="text-xs font-semibold text-indigo-600">
                 Call Revenue (কল বিলিং আয়)
               </span>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400">গ্রাহকদের থেকে কাটা ব্যালেন্স</div>
+              <div className="text-[11px] text-slate-500">গ্রাহকদের থেকে কাটা ব্যালেন্স</div>
             </div>
-            <div className="p-2.5 rounded-xl bg-indigo-500 text-white shadow-md shadow-indigo-500/30">
-              <PhoneCall className="w-5 h-5" />
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-indigo-300 flex-shrink-0">
+              <img src="/icons/cdr.svg" alt="Revenue" className="w-full h-full object-cover" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               BDT {reportData.kpi.call_revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </div>
-            <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
               <span>{reportData.kpi.completed_calls.toLocaleString()} answered</span>
               <span className="text-[11px]">
                 {(reportData.kpi.total_duration / 60).toFixed(1)} mins
@@ -617,23 +626,23 @@ export default function ReportsPage() {
         </div>
 
         {/* 4. Carrier Cost (টেলিকম কেনা খরচ) - Amber */}
-        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-orange-500/5 to-transparent border border-amber-500/30 bg-white dark:bg-gray-900 shadow-md">
+        <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-orange-500/5 to-transparent border border-amber-500/30 bg-white shadow-md">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+              <span className="text-xs font-semibold text-amber-600">
                 Carrier Cost (টেলিকম খরচ)
               </span>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400">ট্রাঙ্ক / ক্যারিয়ার খরচ</div>
+              <div className="text-[11px] text-slate-500">ট্রাঙ্ক / ক্যারিয়ার খরচ</div>
             </div>
-            <div className="p-2.5 rounded-xl bg-amber-500 text-white shadow-md shadow-amber-500/30">
-              <Calculator className="w-5 h-5" />
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm ring-1 ring-amber-300 flex-shrink-0">
+              <img src="/icons/tariffs.svg" alt="Cost" className="w-full h-full object-cover" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               BDT {reportData.kpi.wholesale_cost.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </div>
-            <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
               <span>Rate: BDT {reportData.kpi.wholesale_rate.toFixed(4)}/p</span>
               <span>ASR: {reportData.kpi.answer_rate}%</span>
             </div>

@@ -307,29 +307,37 @@ export default function CustomersPage() {
 
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-white flex items-center gap-2.5">
-            <Users className="w-6 h-6 text-brand-400" /> Customers & Client Accounts (গ্রাহক ব্যবস্থাপনা)
-          </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Complete client administration with instant <strong>Login As User</strong> (Impersonate), KYC NID document verification, custom pulse billing, and wallet deposit controls.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-sm ring-1 ring-slate-200/80 flex-shrink-0">
+            <img src="/icons/customers.svg" alt="Customers" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              Customers & Client Accounts (গ্রাহক ব্যবস্থাপনা)
+            </h2>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Complete client administration with instant <strong>Login As User</strong> (Impersonate), KYC NID document verification, custom pulse billing, and wallet deposit controls.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={fetchCustomers}
             disabled={loading}
-            className="p-2.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
+            className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-sm"
             title="Refresh customer records"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-600' : ''}`} />
           </button>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-500/20"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 text-white keep-white text-xs font-bold shadow-md shadow-brand-500/20"
           >
-            <UserPlus className="w-4 h-4" /> Add New Customer
+            <div className="w-4 h-4 rounded overflow-hidden flex-shrink-0">
+              <img src="/icons/customers.svg" alt="" className="w-full h-full object-cover" />
+            </div>
+            <span className="text-white keep-white">Add New Customer</span>
           </button>
         </div>
       </div>

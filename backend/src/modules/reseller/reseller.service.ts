@@ -402,4 +402,87 @@ export class ResellerService {
 
     throw new NotFoundException(`NID document file not found on server storage: ${relativePath}`);
   }
+
+  /**
+   * Get white-label branding configuration for a reseller
+   */
+  async getResellerBrand(resellerId: string) {
+    let brand = await this.prisma.resellerBrand.findUnique({
+      where: { resellerId },
+    });
+    if (!brand) {
+      const user = await this.prisma.user.findUnique({ where: { id: resellerId } });
+      brand = await this.prisma.resellerBrand.create({
+        data: {
+          resellerId,
+          brandName: user?.companyName || user?.name || 'Voice SMS Portal',
+          primaryColor: '#2563eb',
+          secondaryColor: '#1e40af',
+          supportEmail: user?.email,
+          supportPhone: user?.phone,
+        },
+      });
+    }
+    return brand;
+  }
+
+  /**
+   * Update white-label branding configuration
+   */
+  async updateResellerBrand(resellerId: string, data: any) {
+    return this.prisma.resellerBrand.upsert({
+      where: { resellerId },
+      update: {
+        customDomain: data.customDomain || null,
+        brandName: data.brandName,
+        logoUrl: data.logoUrl,
+        faviconUrl: data.faviconUrl,
+        primaryColor: data.primaryColor || '#2563eb',
+        secondaryColor: data.secondaryColor || '#1e40af',
+        supportEmail: data.supportEmail,
+        supportPhone: data.supportPhone,
+        footerText: data.footerText,
+        isVerified: data.isVerified !== undefined ? Boolean(data.isVerified) : false,
+      },
+      create: {
+        resellerId,
+        customDomain: data.customDomain || null,
+        brandName: data.brandName || 'Voice SMS Portal',
+        logoUrl: data.logoUrl,
+        faviconUrl: data.faviconUrl,
+        primaryColor: data.primaryColor || '#2563eb',
+        secondaryColor: data.secondaryColor || '#1e40af',
+        supportEmail: data.supportEmail,
+        supportPhone: data.supportPhone,
+        footerText: data.footerText,
+        isVerified: Boolean(data.isVerified),
+      },
+    });
+  }
+
+  /**
+   * Super Admin approves or adjusts Reseller credit limit
+   */
+  async updateCreditLimit(resellerId: string, creditLimit: number, allowNegativeBalance: boolean) {
+    await this.prisma.user.update({
+      where: { id: resellerId },
+      data: {
+        creditLimit: new Prisma.Decimal(creditLimit),
+        allowNegativeBalance,
+      },
+    });
+
+    await this.prisma.wallet.updateMany({
+      where: { userId: resellerId },
+      data: { creditLimit: new Prisma.Decimal(creditLimit) },
+    });
+
+    return {
+      success: true,
+      resellerId,
+      creditLimit,
+      allowNegativeBalance,
+    };
+  }
 }
+

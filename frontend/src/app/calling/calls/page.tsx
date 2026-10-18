@@ -14,6 +14,14 @@ interface CallItem {
   hangupCause?: string;
   initiatedAt?: string;
   createdAt: string;
+  contact?: {
+    id: string;
+    name: string | null;
+  };
+  audio?: {
+    id: string;
+    title: string;
+  };
   user?: {
     name: string;
     email: string;
@@ -144,29 +152,37 @@ export default function CallsHistoryPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-white flex items-center gap-2.5">
-            <History className="w-6 h-6 text-brand-400" /> Calls History & CDR (কল বিবরণী)
-          </h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Real Asterisk CDR records, connected talk durations, telecom trunk routes, and billing settlements.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-sm ring-1 ring-slate-200/80 flex-shrink-0">
+            <img src="/icons/cdr.svg" alt="CDR" className="w-full h-full object-cover" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              Calls History & CDR (কল বিবরণী)
+            </h2>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Real Asterisk CDR records, connected talk durations, telecom trunk routes, and billing settlements.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={fetchCalls}
             disabled={loading}
-            className="p-2.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
+            className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 shadow-sm"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-600' : ''}`} />
           </button>
 
           <button
             onClick={() => setShowTestModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 text-white text-xs font-bold shadow-lg shadow-brand-500/20"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 text-white keep-white text-xs font-bold shadow-md shadow-brand-500/20"
           >
-            <PhoneCall className="w-4 h-4" /> Single Voice Test Call
+            <div className="w-4 h-4 rounded overflow-hidden flex-shrink-0">
+              <img src="/icons/cdr.svg" alt="" className="w-full h-full object-cover" />
+            </div>
+            <span className="text-white keep-white">Single Voice Test Call</span>
           </button>
         </div>
       </div>
@@ -217,7 +233,12 @@ export default function CallsHistoryPage() {
                       <div className="font-mono text-white font-bold">{c.callerId || '999'}</div>
                       <div className="text-[10px] text-gray-500 font-mono">{c.trunk?.name || 'Default Trunk'}</div>
                     </td>
-                    <td className="p-3.5 font-mono text-brand-300 font-bold">{c.phoneNumber}</td>
+                    <td className="p-3.5">
+                      <div className="font-mono text-brand-300 font-bold">{c.phoneNumber}</div>
+                      {c.contact?.name && (
+                        <div className="text-[11px] text-gray-400 font-medium">{c.contact.name}</div>
+                      )}
+                    </td>
                     <td className="p-3.5 text-gray-300 font-semibold">{c.user?.name || 'System User'}</td>
                     <td className="p-3.5 font-mono text-gray-300">{c.duration}s</td>
                     <td className="p-3.5 font-bold text-gray-200">{c.billableSeconds}s</td>

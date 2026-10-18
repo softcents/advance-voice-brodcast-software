@@ -13,9 +13,20 @@ export class CallDispatcherService {
   ) {}
 
   /**
-   * Dispatch a pending call onto the Asterisk trunk while enforcing concurrency
+   * Dispatch a pending call onto the Asterisk trunk while enforcing concurrency and strict idempotency
    */
   async dispatchCall(callId: string) {
+    // 1. Atomic state check & transition: Only one worker can acquire this call
+    const lockAcquired = await this.prisma.callRecord.updateMany({
+      where: { id: callId, status: CallStatus.PENDING },
+      data: { status: CallStatus.INITIATED, initiatedAt: new Date() },
+    });
+
+    if (lockAcquired.count === 0) {
+      this.logger.warn(`Call #${callId} is not in PENDING state or already acquired by another worker. Skipping.`);
+      return { skipped: true, reason: 'ALREADY_DISPATCHED' };
+    }
+
     const call = await this.prisma.callRecord.findUnique({
       where: { id: callId },
       include: {
@@ -26,9 +37,8 @@ export class CallDispatcherService {
       },
     });
 
-    if (!call || call.status !== CallStatus.PENDING) {
-      this.logger.warn(`Call #${callId} is not in PENDING state. Skipping dispatch.`);
-      return;
+    if (!call) {
+      return { skipped: true, reason: 'NOT_FOUND' };
     }
 
     if (!call.trunk || !call.trunk.server) {
@@ -37,22 +47,27 @@ export class CallDispatcherService {
         where: { id: callId },
         data: { status: CallStatus.FAILED, hangupCause: 'NO_TRUNK_CONFIGURED' },
       });
-      return;
+      return { skipped: true, reason: 'NO_TRUNK' };
     }
 
     const trunk = call.trunk;
     const server = trunk.server;
 
-    // Check active concurrency limits
+    // 2. Check active concurrency limits
     if (trunk.activeCalls >= trunk.maxConcurrency || server.activeChannels >= server.maxConcurrency) {
       this.logger.warn(
         `Concurrency limit reached for Trunk ${trunk.name} (${trunk.activeCalls}/${trunk.maxConcurrency}) or Server (${server.activeChannels}/${server.maxConcurrency}). Re-queueing.`,
       );
+      // Revert status to PENDING for subsequent batch pickup
+      await this.prisma.callRecord.update({
+        where: { id: callId },
+        data: { status: CallStatus.PENDING, initiatedAt: null },
+      });
       return { requeue: true };
     }
 
     try {
-      // Increment active channels
+      // 3. Atomically increment active channel counters
       await this.prisma.$transaction([
         this.prisma.sipTrunk.update({
           where: { id: trunk.id },
@@ -61,10 +76,6 @@ export class CallDispatcherService {
         this.prisma.asteriskServer.update({
           where: { id: server.id },
           data: { activeChannels: { increment: 1 } },
-        }),
-        this.prisma.callRecord.update({
-          where: { id: call.id },
-          data: { status: CallStatus.INITIATED, initiatedAt: new Date() },
         }),
       ]);
 
@@ -85,22 +96,23 @@ export class CallDispatcherService {
         data: {
           uniqueId: originateRes.uniqueId,
           channelId: originateRes.channelId,
+          linkedId: originateRes.linkedId,
           status: CallStatus.RINGING,
         },
       });
 
-      return { success: true, channelId: originateRes.channelId };
+      return { success: true, channelId: originateRes.channelId, uniqueId: originateRes.uniqueId };
     } catch (err: any) {
       this.logger.error(`Dispatch failed for Call #${callId}: ${err.message}`);
 
-      // Decrement counters on failure
+      // Decrement counters on originate failure
       await this.prisma.$transaction([
-        this.prisma.sipTrunk.update({
-          where: { id: trunk.id },
+        this.prisma.sipTrunk.updateMany({
+          where: { id: trunk.id, activeCalls: { gt: 0 } },
           data: { activeCalls: { decrement: 1 } },
         }),
-        this.prisma.asteriskServer.update({
-          where: { id: server.id },
+        this.prisma.asteriskServer.updateMany({
+          where: { id: server.id, activeChannels: { gt: 0 } },
           data: { activeChannels: { decrement: 1 } },
         }),
         this.prisma.callRecord.update({

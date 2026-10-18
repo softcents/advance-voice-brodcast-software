@@ -154,8 +154,8 @@ export default function RegisterPage() {
           <div className="p-8 rounded-3xl glass-panel border border-gray-800 shadow-2xl bg-gray-950/75 backdrop-blur-xl space-y-6">
             <div className="flex items-center justify-between pb-4 border-b border-gray-800">
               <div>
-                <h2 className="text-lg font-bold text-white">Create New Customer Account</h2>
-                <p className="text-xs text-gray-400">Filament v5 Form: User, Company & National ID Verification</p>
+                <h2 className="text-lg font-bold text-white">Create New Enterprise Account</h2>
+                <p className="text-xs text-gray-400">Enterprise Onboarding: Corporate Identity, KYB & National ID Verification</p>
               </div>
               <Link
                 href="/login"

@@ -16,10 +16,7 @@ export class CampaignController {
     @Headers('authorization') authHeader?: string,
   ) {
     const auth = extractAuthUser(authHeader, queryUserId);
-    let targetUserId = auth.userId;
-    if (auth.role === 'CUSTOMER') {
-      targetUserId = auth.userId;
-    }
+    const targetUserId = auth.role === 'SUPER_ADMIN' ? (queryUserId || auth.userId) : auth.userId;
     return this.campaignService.getCampaigns(targetUserId);
   }
 
@@ -29,12 +26,7 @@ export class CampaignController {
     @Headers('authorization') authHeader?: string,
   ) {
     const auth = extractAuthUser(authHeader, dto.userId);
-    let userId = auth.userId;
-
-    if (!userId) {
-      const user = await this.prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } });
-      userId = user?.id;
-    }
+    const userId = auth.userId;
 
     if (!userId) {
       throw new BadRequestException('User identification required to create campaign');
@@ -49,12 +41,7 @@ export class CampaignController {
     @Headers('authorization') authHeader?: string,
   ) {
     const auth = extractAuthUser(authHeader, dto.userId);
-    let userId = auth.userId;
-
-    if (!userId) {
-      const user = await this.prisma.user.findFirst({ where: { role: 'SUPER_ADMIN' } });
-      userId = user?.id;
-    }
+    const userId = auth.userId;
 
     if (!userId) {
       throw new BadRequestException('User identification required to send OTP');
